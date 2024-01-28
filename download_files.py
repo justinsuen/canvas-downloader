@@ -9,7 +9,7 @@ canvas = Canvas(config.API_URL, config.API_KEY)
 
 headers = {'Authorization': f'Bearer {config.API_KEY}'}
 # _path = '/home/voldemort/Documents/Course-Notes'
-_path = './output-old'
+_path = './output-df'
 _names = []
 
 
@@ -37,12 +37,12 @@ def _getUser():
 
 def _getCurrentCourses(user):
     print('Getting Current Courses...')
-    return user.get_courses(enrollment_status='active')
+    return user.get_courses(include="term", enrollment_status='active')
 
 
 def _getCourses(user):
     print('Getting Courses...')
-    return user.get_courses()
+    return user.get_courses(include="term")
 
 
 def _downloadFile(file, folder_path):
@@ -54,8 +54,7 @@ def _downloadFile(file, folder_path):
         except:
             import pdb
             pdb.set_trace()
-    fp = folder_path + f_name
-    f_path = os.path.join(_path, fp)
+    f_path = os.path.join(folder_path + f_name)
 
     if _shouldWrite(f_path):
         try:
@@ -66,16 +65,32 @@ def _downloadFile(file, folder_path):
 
 
 def downloadCourseFiles(course, path):
+    if not hasattr(course, "name") or not hasattr(course, "term"):
+        pass
+    else:
+        # Course Code
+        course_code = sanitize_filename(course.course_code)
+
+        # Course Term
+        course_term = course.term["name"].replace(' ', '-')
+
+        # Course Directory
+        course_dir = os.path.join(_path, course_term, course_code)
+
     try:
         print('Getting folders for ' + str(course))
         folders = course.get_folders()
+
         for folder in folders:
             try:
                 files = folder.get_files()
+
                 for file in files:
-                    folder_path = str(course).split(
-                        '-')[0][:6] + '/' + str(folder) + '/'
+
+                    folder_path = course_dir + '/' + str(folder) + '/'
+
                     _downloadFile(file, folder_path)
+
             except (Unauthorized, ResourceDoesNotExist) as e:
                 print("Folder not accesile...")
     except:

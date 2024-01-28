@@ -24,7 +24,7 @@ def _getCourses(user):
 
 
 def _getCurrentCourses(user):
-    return user.get_courses(enrollment_status='active')
+    return user.get_courses(include="term", enrollment_status='active')
 
 
 def _mkDir(path):
