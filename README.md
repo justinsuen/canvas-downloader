@@ -13,7 +13,7 @@ Installation Steps:
       * API_URL = 'https://canvas.instructure.com'
   4. Configure _path variable in python file for custom save destination
   5. Run pip install -r requrements.txt in shell
-  6. Run python3 main.py
+  6. Run ==python3 main.py== or ==python3 download_files.py== 
 
 TODO:
 * Download media files
