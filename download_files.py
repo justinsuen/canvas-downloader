@@ -1,8 +1,11 @@
-from canvasapi import Canvas
-import config
-from pathvalidate import sanitize_filename
-from canvasapi.exceptions import Unauthorized, ResourceDoesNotExist
 import os
+import config
+
+import tqdm
+from pathvalidate import sanitize_filename
+from canvasapi import Canvas
+from canvasapi.exceptions import Unauthorized, ResourceDoesNotExist
+
 
 
 canvas = Canvas(config.API_URL, config.API_KEY)
@@ -78,10 +81,10 @@ def downloadCourseFiles(course, path):
         course_dir = os.path.join(_path, course_term, course_code)
 
     try:
-        print('Getting folders for ' + str(course))
+        # print('Getting folders for ' + str(course))
         folders = course.get_folders()
 
-        for folder in folders:
+        for folder in tqdm.tqdm(folders, desc=f'{course_code} Folders', total=len(list(folders)), leave=False):
             try:
                 files = folder.get_files()
 
@@ -91,10 +94,10 @@ def downloadCourseFiles(course, path):
 
                     _downloadFile(file, folder_path)
 
-            except (Unauthorized, ResourceDoesNotExist) as e:
-                print("Folder not accesile...")
+            except:
+                print(f"Folder {folder} not accessible...")
     except:
-        print('Course not available...')
+        print(f'{course_code} not available...')
 
 
 user = _getUser()
@@ -103,7 +106,7 @@ courses = _getCourses(user)
 
 def download_files():
     path = makePath()
-    for course in courses:
+    for course in tqdm.tqdm(courses, desc='Downloading', total=len(list(courses)), leave=False):
         downloadCourseFiles(course, path)
 
 
