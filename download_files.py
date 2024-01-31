@@ -1,12 +1,13 @@
 import os
 import config
+import logging
 
 import tqdm
 from pathvalidate import sanitize_filename
 from canvasapi import Canvas
 from canvasapi.exceptions import Unauthorized, ResourceDoesNotExist
 
-
+logging.basicConfig(filename='download.log', encoding='utf-8', level=logging.DEBUG)
 
 canvas = Canvas(config.API_URL, config.API_KEY)
 
@@ -63,11 +64,13 @@ def _downloadFile(file, folder_path):
         try:
             file.download(f_path)
         except (Unauthorized, ResourceDoesNotExist) as e:
-            print(f"file not accesible")
-            print(str(e))
+            # print(f"file not accesible")
+            logging.error('%s file %s not accessible', e, f_name)
+            # print(str(e))
 
 
 def downloadCourseFiles(course, path):
+    course_code = ''
     if not hasattr(course, "name") or not hasattr(course, "term"):
         pass
     else:
@@ -95,9 +98,11 @@ def downloadCourseFiles(course, path):
                     _downloadFile(file, folder_path)
 
             except:
-                print(f"Folder {folder} not accessible...")
+                # print(f"\nFolder {folder} not accessible...\n")
+                logging.error('Course %s folder %s not accessible', course_code, str(folder))
     except:
-        print(f'{course_code} not available...')
+        # print(f'\nCourse not available...\n')
+        logging.error('%s not accessible', course_code)
 
 
 user = _getUser()
