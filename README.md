@@ -8,7 +8,7 @@ Install python;
   * run `brew install python3` in Terminal after HomeBrew installs
 
 Download repository zip file, unzip to location (ex; Documents)
-* Open terminal, navigate to directory by typing ex; `cd /users/user/Documents/DownloadCanvasFiles/`
+* Open terminal (Mac), or powershell (Windows) navigate to directory by typing ex; `cd /users/user/Documents/DownloadCanvasFiles/`
 * Follow installation steps below 
 
 Recommend using `download_files.py`
