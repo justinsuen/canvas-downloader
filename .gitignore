@@ -163,3 +163,5 @@ config.py
 
 output/
 output-df/
+
+download.log
