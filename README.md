@@ -11,8 +11,6 @@ Download repository zip file, unzip to location (ex; Documents)
 * Open terminal (Mac), or powershell (Windows) navigate to directory by typing ex; `cd /users/user/Documents/DownloadCanvasFiles/`
 * Follow installation steps below 
 
-Recommend using `download_files.py`
-
 NOTE: You need to generate a new API key on Canvas prior to use.
 
 Installation Steps:
@@ -21,10 +19,11 @@ Installation Steps:
   2. Create config.py with two variables, ensure they are in quotes (ex; '');
       * API_KEY = 'key' -> generated from Canvas User settings
       * API_URL = 'https://canvas.instructure.com'
-  3. Configure _path variable in python file for custom save destination
+  3. Configure _path variable in python file for custom save directory
   4. Run `pip install -r requrements.txt` in shell
   5. Run `python3 download_files.py``:`
 
 TODO:
 * Download media files
-* Download assignment submissions
+* Download assignment description file, create subdirectories
+* Cleanup directory, add conditional folder structure
