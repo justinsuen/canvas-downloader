@@ -2,7 +2,9 @@ import os
 import config
 import logging
 
+import requests
 import tqdm
+
 from pathvalidate import sanitize_filename
 from canvasapi import Canvas
 from canvasapi.exceptions import Unauthorized, ResourceDoesNotExist
@@ -83,6 +85,7 @@ def downloadCourseFiles(course, path):
         # Course Directory
         course_dir = os.path.join(_path, course_term, course_code)
 
+    # Download Files
     try:
         # print('Getting folders for ' + str(course))
         folders = course.get_folders()
@@ -104,15 +107,42 @@ def downloadCourseFiles(course, path):
         # print(f'\nCourse not available...\n')
         logging.error('%s not accessible', course_code)
 
+    # Download Assignments:
+    try:
+        assignments = list(course.get_assignments())
+        assignment_dir = course_dir + '/assignments/'
+
+        if not os.path.exists(assignment_dir):
+            _mkDir(assignment_dir)
+        
+        for assignment in assignments:
+            # Get Submissions
+            submissions = assignment.get_submission(user)
+            
+            # Get Attachments
+            for attachment in submissions.attachments:
+
+                file_path = os.path.join(assignment_dir, sanitize_filename(str(attachment.filename)))
+
+                if not os.path.exists(file_path):
+                    r = requests.get(attachment.url, allow_redirects=True)
+                    with open(file_path, 'wb') as f:
+                        f.write(r.content)
+
+    except:
+        logging.error('Unable to get submission file...')
 
 user = _getUser()
 courses = _getCourses(user)
-
 
 def download_files():
     path = makePath()
     for course in tqdm.tqdm(courses, desc='Downloading', total=len(list(courses)), leave=False):
         downloadCourseFiles(course, path)
+
+
+if __name__ == "__main__":
+    download_files()
 
 
 if __name__ == "__main__":
