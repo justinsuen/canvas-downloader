@@ -62,6 +62,27 @@ def _downloadFile(file, folder_path):
             logging.error('%s file %s not accessible', e, f_name)
 
 
+def _downloadLargeFile(file, folder_path):
+    try:
+        f_name = file.title
+    except AttributeError:
+        try:
+            f_name = file.display_name
+        except:
+            import pdb
+            pdb.set_trace
+    f_path = os.path.join(folder_path, f_name)
+
+    if _shouldWrite(f_path):
+        try:
+            with requests.get(file.url, stream=True) as r:
+                r.raise_for_status()
+                with open(f_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+        except (Unauthorized, ResourceDoesNotExist) as e:
+            logging.error('%s file %s not accessible', e, f_name)
+
 def downloadAssignmentSubmissions(course, course_dir):
     # Download Assignments:
     try:
@@ -102,7 +123,11 @@ def downloadCourseFiles(course, course_dir, course_code):
 
                     folder_path = course_dir + '/' + str(folder) + '/'
 
-                    _downloadFile(file, folder_path)
+                    # Check File Size, if greater then 100 MB
+                    if int(file.size) >= 100000000:
+                        _downloadLargeFile(file, folder_path)
+                    else:
+                        _downloadFile(file, folder_path)
 
             except:
                 logging.error('Course %s folder %s not accessible', course_code, str(folder))
