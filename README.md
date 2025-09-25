@@ -27,8 +27,8 @@ downloads/
 ## Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- Node.js 14+
+- Python 3.9+
+- Node.js 22+
 - Canvas API token from your institution
 
 ### Installation
@@ -51,12 +51,9 @@ python server/app.py
 
 2. **Setup Frontend**:
 ```bash
-# In a new terminal
-npx create-react-app frontend
-cd frontend
-npm install lucide-react socket.io-client
+# Install dependencies
+npm i
 
-# Copy the React component to src/App.js
 # Start React server
 npm start
 ```
@@ -97,8 +94,7 @@ poetry install --with dev
 poetry shell
 
 # Run with auto-reload
-export FLASK_ENV=development
-python app.py
+FLASK_ENV=development python server/app.py
 
 # Run tests
 pytest
@@ -124,7 +120,7 @@ npm run build
 ## Troubleshooting
 
 **Connection Issues**:
-- Verify backend runs on `http://localhost:5000`
+- Verify backend runs on `http://localhost:8000`
 - Check Canvas API URL format (no trailing slash)
 - Test API token validity
 
@@ -143,21 +139,10 @@ npm run build
 ### Local Network
 ```bash
 # Backend
-python app.py --host=0.0.0.0
+python server/app.py --host=0.0.0.0
 
 # Frontend  
 npm run build
-```
-
-### Docker
-```dockerfile
-# Backend
-FROM python:3.9-slim
-RUN pip install poetry
-COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-dev
-COPY app.py ./
-CMD ["poetry", "run", "python", "app.py"]
 ```
 
 ## License

@@ -1,4 +1,0 @@
-requests
-canvasapi
-pathvalidate
-tqdm

@@ -25,7 +25,6 @@ Start every feature with: "Let me research the codebase and create a plan before
 
 ### Backend (Python Flask)
 - **Main file**: `server/app.py` - Flask server with Socket.IO for real-time communication
-- **Legacy script**: `download_files.py` - Original CLI-based downloader
 - **Key components**:
   - `DownloadManager` class handles download orchestration and progress tracking
   - Socket.IO provides real-time updates to frontend
@@ -42,7 +41,6 @@ Start every feature with: "Let me research the codebase and create a plan before
 ### Dependencies Management
 - **Backend**: Poetry (`pyproject.toml`) for Python dependency management
 - **Frontend**: npm (`package.json`) for JavaScript dependencies
-- **Legacy**: `requirements.txt` (for the original CLI script)
 
 ## Development Commands
 
@@ -115,7 +113,6 @@ Downloads are organized as: `downloads/Term/Course-Code/folder-name/files`
 
 ## File Structure
 - `server/app.py` - Main Flask application with Socket.IO
-- `download_files.py` - Legacy CLI downloader (uses `config.py` for credentials)
 - `frontend/` - React application
 - `downloads/` - Default download directory (created automatically)
 - `canvas_downloader.log` - Application logs
