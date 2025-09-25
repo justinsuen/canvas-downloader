@@ -7,10 +7,17 @@ import Header from './Header';
 import io from 'socket.io-client';
 
 const CanvasDownloader = () => {
-  const [config, setConfig] = useState({
-    apiUrl: '',
-    apiKey: '',
-    outputPath: './downloads'
+  const [config, setConfig] = useState(() => {
+    // Load saved config from localStorage
+    const savedApiUrl = localStorage.getItem('canvas_api_url') || '';
+    const savedApiKey = localStorage.getItem('canvas_api_key') || '';
+    const savedOutputPath = localStorage.getItem('canvas_output_path') || './downloads';
+
+    return {
+      apiUrl: savedApiUrl,
+      apiKey: savedApiKey,
+      outputPath: savedOutputPath
+    };
   });
   const [courses, setCourses] = useState([]);
   const [selectedCourses, setSelectedCourses] = useState(new Set());
@@ -154,6 +161,13 @@ const CanvasDownloader = () => {
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString('en-GB', { hour12: false });
     setLogs(prev => [...prev, { message, type, timestamp }]);
+  };
+
+  const saveConfigToStorage = (newConfig) => {
+    localStorage.setItem('canvas_api_url', newConfig.apiUrl);
+    localStorage.setItem('canvas_api_key', newConfig.apiKey);
+    localStorage.setItem('canvas_output_path', newConfig.outputPath);
+    setConfig(newConfig);
   };
 
   // Test backend connection
@@ -400,7 +414,7 @@ const CanvasDownloader = () => {
           >
             <ConfigurationPanel
               config={config}
-              setConfig={setConfig}
+              setConfig={saveConfigToStorage}
               setShowConfig={setShowConfig}
               addLog={addLog}
               onSave={() => {

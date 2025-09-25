@@ -11,7 +11,7 @@ const ConfigurationPanel = ({ config, setConfig, setShowConfig, addLog, onSave }
             type="text"
             placeholder="https://your-school.instructure.com"
             value={config.apiUrl}
-            onChange={(e) => setConfig(prev => ({ ...prev, apiUrl: e.target.value }))}
+            onChange={(e) => setConfig({ ...config, apiUrl: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -21,7 +21,7 @@ const ConfigurationPanel = ({ config, setConfig, setShowConfig, addLog, onSave }
             type="text"
             placeholder="Your Canvas API token"
             value={config.apiKey}
-            onChange={(e) => setConfig(prev => ({ ...prev, apiKey: e.target.value }))}
+            onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoComplete="off"
           />
@@ -32,7 +32,7 @@ const ConfigurationPanel = ({ config, setConfig, setShowConfig, addLog, onSave }
             type="text"
             placeholder="./downloads"
             value={config.outputPath}
-            onChange={(e) => setConfig(prev => ({ ...prev, outputPath: e.target.value }))}
+            onChange={(e) => setConfig({ ...config, outputPath: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -48,7 +48,7 @@ const ConfigurationPanel = ({ config, setConfig, setShowConfig, addLog, onSave }
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Save Configuration
+            Authenticate and Fetch Courses
           </button>
           <button
             onClick={() => setShowConfig(false)}
