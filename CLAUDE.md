@@ -17,7 +17,7 @@ Start every feature with: "Let me research the codebase and create a plan before
 - **Validate**: ALWAYS run formatters, linters, and tests after implementation.
 
 ### Imperatives
-- Always start in plan mode to make a plan.
+- Always start in plan mode to make a plan. Don't be verbose. Be concise.
 - Write the plan to .claude/tasks/{YYYY-MM-DD}_{TASK_NAME}.md.
 - If the task requires external knowledge or a certain package, research to get the latest knowledge and add it to the plan. Use Task tool to research.
 
