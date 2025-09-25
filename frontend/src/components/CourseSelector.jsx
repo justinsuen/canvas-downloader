@@ -7,6 +7,7 @@ const CourseSelector = ({
   setSelectedCourses,
   downloadStatus,
   progress,
+  courseProgress,
   startDownload,
   stopDownload
 }) => {
@@ -43,8 +44,36 @@ const CourseSelector = ({
       {downloadStatus === 'loading' ? (
         <div className="text-center py-8 text-gray-500 flex-1 flex flex-col items-center justify-center">
           <Loader className="mx-auto mb-3 animate-spin text-blue-600" size={48} />
-          <p className="text-lg font-medium text-gray-700">Fetching courses from Canvas...</p>
-          <p className="text-sm text-gray-500 mt-1">Please wait while we retrieve your course information</p>
+          <p className="text-lg font-medium text-gray-700">
+            {courseProgress.total > 0 ? 'Processing courses...' : 'Fetching courses from Canvas...'}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            {courseProgress.total > 0
+              ? 'Calculating file counts and organizing course data'
+              : 'Please wait while we retrieve your course information'
+            }
+          </p>
+
+          {/* Course Progress Bar */}
+          {courseProgress.total > 0 && (
+            <div className="w-full max-w-md mt-6 space-y-3">
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>Processing: {courseProgress.current}/{courseProgress.total}</span>
+                <span>{Math.round((courseProgress.current / courseProgress.total) * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+                  style={{ width: `${(courseProgress.current / courseProgress.total) * 100}%` }}
+                />
+              </div>
+              {courseProgress.course_name && (
+                <p className="text-xs text-gray-500 text-center">
+                  Current: {courseProgress.course_name}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       ) : courses.length === 0 ? (
         <div className="text-center py-8 text-gray-500 flex-1 flex flex-col items-center justify-center">

@@ -428,14 +428,25 @@ def get_courses():
             enrollment_status='active'
         ))
         emit_log_to_client(f"Retrieved {len(courses)} active courses from Canvas", 'success', socket_id)
-        
+
         # Format courses for frontend
         course_list = []
-        for course in courses:
+        total_courses = len(courses)
+
+        for course_index, course in enumerate(courses, 1):
             try:
                 # Safely get course attributes with defaults
                 course_name = getattr(course, 'name', 'Unnamed Course')
                 course_code = getattr(course, 'course_code', 'No Code')
+
+                # Emit progress update
+                if socket_id:
+                    progress_data = {
+                        'current': course_index,
+                        'total': total_courses,
+                        'course_name': course_name
+                    }
+                    socketio.emit('course_fetch_progress', progress_data, room=socket_id)
                 
                 # Handle term safely
                 term_info = {'name': 'Unknown Term'}

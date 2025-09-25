@@ -23,6 +23,7 @@ const CanvasDownloader = () => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
+  const [courseProgress, setCourseProgress] = useState({ current: 0, total: 0, course_name: '' });
 
 
   const API_PORT = process.env.REACT_APP_API_PORT || 8000;
@@ -134,6 +135,11 @@ const CanvasDownloader = () => {
       addLog(`Authenticated as ${data.user.name}`, 'success');
     });
 
+    newSocket.on('course_fetch_progress', (data) => {
+      console.log('Course fetch progress:', data);
+      setCourseProgress(data);
+    });
+
     newSocket.on('error', (error) => {
       console.error('Socket.IO error:', error);
       addLog(`Socket error: ${error.message}`, 'error');
@@ -176,6 +182,7 @@ const CanvasDownloader = () => {
     if (!config.apiUrl || !config.apiKey) return;
 
     setDownloadStatus('loading');
+    setCourseProgress({ current: 0, total: 0, course_name: '' }); // Reset progress
     addLog('Fetching courses from Canvas...', 'info');
 
     // Test backend connection first
@@ -366,6 +373,7 @@ const CanvasDownloader = () => {
             setSelectedCourses={setSelectedCourses}
             downloadStatus={downloadStatus}
             progress={progress}
+            courseProgress={courseProgress}
             startDownload={handleStartDownload}
             stopDownload={handleStopDownload}
             backendConnected={backendConnected}
