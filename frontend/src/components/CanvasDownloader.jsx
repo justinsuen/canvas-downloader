@@ -128,6 +128,12 @@ const CanvasDownloader = () => {
       setLogs(prev => [...prev, normalizedLogEntry]);
     });
 
+    newSocket.on('user_authenticated', (data) => {
+      console.log('User authenticated:', data);
+      setCurrentUser(data.user);
+      addLog(`Authenticated as ${data.user.name}`, 'success');
+    });
+
     newSocket.on('error', (error) => {
       console.error('Socket.IO error:', error);
       addLog(`Socket error: ${error.message}`, 'error');

@@ -413,6 +413,14 @@ def get_courses():
         user = canvas.get_current_user()
         emit_log_to_client(f"Successfully authenticated as user: {user.name}", 'success', socket_id)
 
+        # Emit user info immediately to update connection status
+        if socket_id:
+            user_info = {
+                'name': getattr(user, 'name', 'Unknown User'),
+                'id': getattr(user, 'id', 0)
+            }
+            socketio.emit('user_authenticated', {'user': user_info}, room=socket_id)
+
         emit_log_to_client("Fetching user's courses from Canvas API...", 'info', socket_id)
         # Get courses with additional includes
         courses = list(user.get_courses(
