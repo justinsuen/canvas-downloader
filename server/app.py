@@ -45,6 +45,21 @@ socketio = SocketIO(app, cors_allowed_origins=FRONTEND_URLS, logger=True, engine
 active_downloads = {}
 download_locks = {}
 
+def emit_log_to_client(message, log_type='info', socket_id=None):
+    """Helper function to emit logs to frontend via Socket.IO"""
+    timestamp = datetime.now().strftime('%H:%M:%S')
+    log_entry = {
+        'message': message,
+        'type': log_type,
+        'timestamp': timestamp
+    }
+
+    if socket_id:
+        socketio.emit('download_log', log_entry, room=socket_id)
+        logger.info(f"[Socket {socket_id[:8]}] {message}")
+    else:
+        logger.info(f"[No Socket] {message}")
+
 # Logging setup
 logging.basicConfig(
     level=logging.INFO,
@@ -84,8 +99,7 @@ class DownloadManager:
             'timestamp': timestamp
         }
         self.logs.append(log_entry)
-        socketio.emit('download_log', log_entry, room=self.socket_id)
-        logger.info(f"[{self.download_id}] {message}")
+        emit_log_to_client(message, log_type, self.socket_id)
         
     def initialize_canvas(self):
         """Initialize Canvas API connection"""
@@ -383,19 +397,29 @@ def get_courses():
         data = request.json
         api_url = data.get('apiUrl')
         api_key = data.get('apiKey')
-        
+        socket_id = data.get('socketId')
+
+        emit_log_to_client("Received request to fetch courses from Canvas API", 'info', socket_id)
+
         if not api_url or not api_key:
+            emit_log_to_client("Missing API URL or API key in request", 'error', socket_id)
             return jsonify({'error': 'API URL and API key are required'}), 400
-            
+
+        emit_log_to_client(f"Initializing Canvas API connection to {api_url}", 'info', socket_id)
         # Initialize Canvas
         canvas = Canvas(api_url, api_key)
+
+        emit_log_to_client("Fetching current user information from Canvas", 'info', socket_id)
         user = canvas.get_current_user()
-        
+        emit_log_to_client(f"Successfully authenticated as user: {user.name}", 'success', socket_id)
+
+        emit_log_to_client("Fetching user's courses from Canvas API...", 'info', socket_id)
         # Get courses with additional includes
         courses = list(user.get_courses(
             include=["term", "course_progress", "storage_quota_used_mb", "total_students"],
             enrollment_status='active'
         ))
+        emit_log_to_client(f"Retrieved {len(courses)} active courses from Canvas", 'success', socket_id)
         
         # Format courses for frontend
         course_list = []
@@ -467,6 +491,8 @@ def get_courses():
                 
         logger.info(f"Successfully processed {len(course_list)} courses")
         
+        emit_log_to_client(f"Successfully processed {len(course_list)} courses", 'success', socket_id)
+
         return jsonify({
             'courses': course_list,
             'user': {
@@ -474,15 +500,15 @@ def get_courses():
                 'id': getattr(user, 'id', 0)
             }
         })
-        
+
     except Unauthorized:
-        logger.error("Canvas API authentication failed")
+        emit_log_to_client("Canvas API authentication failed - invalid credentials", 'error', socket_id)
         return jsonify({'error': 'Invalid Canvas API credentials'}), 401
     except CanvasException as e:
-        logger.error(f"Canvas API error: {str(e)}")
+        emit_log_to_client(f"Canvas API error: {str(e)}", 'error', socket_id)
         return jsonify({'error': f'Canvas API error: {str(e)}'}), 500
     except Exception as e:
-        logger.error(f"Error fetching courses: {str(e)}")
+        emit_log_to_client(f"Error fetching courses: {str(e)}", 'error', socket_id)
         return jsonify({'error': f'Failed to fetch courses: {str(e)}'}), 500
 
 @app.route('/api/download/start', methods=['POST'])

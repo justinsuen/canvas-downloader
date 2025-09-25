@@ -190,7 +190,8 @@ const CanvasDownloader = () => {
         },
         body: JSON.stringify({
           apiUrl: config.apiUrl,
-          apiKey: config.apiKey
+          apiKey: config.apiKey,
+          socketId: socket?.id
         })
       });
 

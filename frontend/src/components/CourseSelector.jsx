@@ -1,5 +1,5 @@
 import React from 'react';
-import { Folder, File, CheckCircle, Play, Pause, AlertCircle } from 'lucide-react';
+import { Folder, File, CheckCircle, Play, Pause, AlertCircle, Loader } from 'lucide-react';
 
 const CourseSelector = ({
   courses,
@@ -40,7 +40,13 @@ const CourseSelector = ({
         </button>
       </div>
 
-      {courses.length === 0 ? (
+      {downloadStatus === 'loading' ? (
+        <div className="text-center py-8 text-gray-500 flex-1 flex flex-col items-center justify-center">
+          <Loader className="mx-auto mb-3 animate-spin text-blue-600" size={48} />
+          <p className="text-lg font-medium text-gray-700">Fetching courses from Canvas...</p>
+          <p className="text-sm text-gray-500 mt-1">Please wait while we retrieve your course information</p>
+        </div>
+      ) : courses.length === 0 ? (
         <div className="text-center py-8 text-gray-500 flex-1 flex flex-col items-center justify-center">
           <Folder className="mx-auto mb-2" size={48} />
           <p>No courses found. Please configure your API settings.</p>
