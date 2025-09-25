@@ -8,7 +8,7 @@ const Header = ({ showConfig, setShowConfig, backendConnected, isConnected, curr
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Download className="text-blue-600" />
-            Canvas Sync
+            Canvas Downloader
           </h1>
           <div className="flex items-center gap-4 mt-2">
             <p className="text-gray-600">
