@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "canvas-downloader"
+version = "0.1.0"
+description = "A React + Flask-based web application for automatically downloading course files from Canvas LMS"
+authors = ["jsuen27@gmail.com"]
+readme = "README.md"
+packages = [{include = "server"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+Flask = "^2.3.3"
+Flask-CORS = "^4.0.0"
+Flask-SocketIO = "^5.3.6"
+canvasapi = "^3.2.0"
+requests = "^2.31.0"
+pathvalidate = "^3.2.0"
+python-socketio = "^5.8.0"
+eventlet = "^0.33.3"
+python-dotenv = "^1.1.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-flask = "^1.2.0"
+black = "^23.7.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+canvas-downloader = "app:main"

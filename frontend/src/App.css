@@ -1,0 +1,183 @@
+/* src/App.css */
+
+/* Tailwind CSS imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+
+  * {
+    @apply box-border;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+
+  /* Custom button variants */
+  .btn-canvas {
+    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-canvas-primary {
+    @apply btn-canvas bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+  }
+
+  .btn-canvas-secondary {
+    @apply btn-canvas bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500;
+  }
+
+  .btn-canvas-danger {
+    @apply btn-canvas bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+
+  /* Custom card styles */
+  .card-canvas {
+    @apply bg-white rounded-lg shadow-lg p-6 transition-all duration-200;
+  }
+
+  .card-canvas:hover {
+    @apply shadow-xl transform -translate-y-1;
+  }
+
+  /* Course selection card */
+  .course-card {
+    @apply border rounded-lg p-4 cursor-pointer transition-colors duration-200;
+  }
+
+  .course-card-default {
+    @apply course-card border-gray-200 hover:border-gray-300;
+  }
+
+  .course-card-selected {
+    @apply course-card border-blue-500 bg-blue-50;
+  }
+
+  /* Form input styles */
+  .input-canvas {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200;
+  }
+
+  /* Progress bar */
+  .progress-bar-bg {
+    @apply w-full bg-gray-200 rounded-full h-2;
+  }
+
+  .progress-bar-fill {
+    @apply bg-blue-600 h-2 rounded-full transition-all duration-300;
+  }
+
+  /* Log panel styles */
+  .log-panel {
+    @apply bg-gray-50 rounded-lg p-4 overflow-y-auto;
+  }
+
+  .log-entry {
+    @apply flex items-start gap-2 text-sm mb-1;
+  }
+
+  .log-timestamp {
+    @apply text-gray-400 text-xs font-mono flex-shrink-0 mt-0.5;
+  }
+}
+
+/* Custom utility classes */
+@layer utilities {
+
+  /* Gradient backgrounds */
+  .bg-gradient-canvas {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .bg-gradient-canvas-light {
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+  }
+
+  /* Custom shadows */
+  .shadow-canvas {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .shadow-canvas-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Text gradients */
+  .text-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  /* Loading state */
+  .loading {
+    @apply opacity-60 pointer-events-none;
+  }
+
+  /* Smooth scroll */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom animations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+/* Custom scrollbar for log panel */
+.log-panel::-webkit-scrollbar {
+  @apply w-2;
+}
+
+.log-panel::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded;
+}
+
+.log-panel::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded;
+}
+
+.log-panel::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    @apply hidden;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card-canvas {
+    @apply border-2 border-gray-900;
+  }
+
+  .btn-canvas-primary {
+    @apply border-2 border-blue-900;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
