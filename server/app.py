@@ -45,20 +45,32 @@ socketio = SocketIO(app, cors_allowed_origins=FRONTEND_URLS, logger=True, engine
 active_downloads = {}
 download_locks = {}
 
+def sanitize_log_message(message):
+    """Remove API keys and sensitive data from log messages"""
+    import re
+    if isinstance(message, str):
+        # Remove API keys (40+ character hex strings)
+        message = re.sub(r'[a-f0-9]{40,}', '[API_KEY_REDACTED]', message, flags=re.IGNORECASE)
+        # Remove URLs with tokens
+        message = re.sub(r'access_token=[^&\s]+', 'access_token=[REDACTED]', message, flags=re.IGNORECASE)
+    return message
+
 def emit_log_to_client(message, log_type='info', socket_id=None):
     """Helper function to emit logs to frontend via Socket.IO"""
     timestamp = datetime.now().strftime('%H:%M:%S')
+    sanitized_message = sanitize_log_message(message)
+
     log_entry = {
-        'message': message,
+        'message': sanitized_message,
         'type': log_type,
         'timestamp': timestamp
     }
 
     if socket_id:
         socketio.emit('download_log', log_entry, room=socket_id)
-        logger.info(f"[Socket {socket_id[:8]}] {message}")
+        logger.info(f"[Socket {socket_id[:8]}] {sanitized_message}")
     else:
-        logger.info(f"[No Socket] {message}")
+        logger.info(f"[No Socket] {sanitized_message}")
 
 # Logging setup
 logging.basicConfig(

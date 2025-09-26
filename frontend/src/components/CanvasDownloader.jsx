@@ -1,21 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Download } from 'lucide-react';
 import ConfigurationPanel from './ConfigurationPanel';
 import CourseSelector from './CourseSelector';
 import LogPanel from './LogPanel';
 import Header from './Header';
 import io from 'socket.io-client';
+import CryptoJS from 'crypto-js';
 
 const CanvasDownloader = () => {
+  // Encryption helpers
+  const getDeviceKey = () => navigator.userAgent + window.screen.width + window.screen.height;
+  const encrypt = (text) => CryptoJS.AES.encrypt(text, getDeviceKey()).toString();
+  const decrypt = (encrypted) => {
+    try {
+      return CryptoJS.AES.decrypt(encrypted, getDeviceKey()).toString(CryptoJS.enc.Utf8);
+    } catch {
+      return '';
+    }
+  };
+
   const [config, setConfig] = useState(() => {
-    // Load saved config from localStorage
-    const savedApiUrl = localStorage.getItem('canvas_api_url') || '';
-    const savedApiKey = localStorage.getItem('canvas_api_key') || '';
-    const savedOutputPath = localStorage.getItem('canvas_output_path') || './downloads';
+    // Load saved config from sessionStorage with decryption
+    const savedApiUrl = sessionStorage.getItem('canvas_api_url') || '';
+    const encryptedApiKey = sessionStorage.getItem('canvas_api_key') || '';
+    const savedOutputPath = sessionStorage.getItem('canvas_output_path') || './downloads';
 
     return {
       apiUrl: savedApiUrl,
-      apiKey: savedApiKey,
+      apiKey: encryptedApiKey ? decrypt(encryptedApiKey) : '',
       outputPath: savedOutputPath
     };
   });
@@ -158,15 +169,21 @@ const CanvasDownloader = () => {
     };
   }, []);
 
+  const sanitizeForLog = (str) => {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[a-f0-9]{40,}/gi, '[API_KEY_REDACTED]');
+  };
+
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString('en-GB', { hour12: false });
-    setLogs(prev => [...prev, { message, type, timestamp }]);
+    const sanitizedMessage = sanitizeForLog(message);
+    setLogs(prev => [...prev, { message: sanitizedMessage, type, timestamp }]);
   };
 
   const saveConfigToStorage = (newConfig) => {
-    localStorage.setItem('canvas_api_url', newConfig.apiUrl);
-    localStorage.setItem('canvas_api_key', newConfig.apiKey);
-    localStorage.setItem('canvas_output_path', newConfig.outputPath);
+    sessionStorage.setItem('canvas_api_url', newConfig.apiUrl);
+    sessionStorage.setItem('canvas_api_key', newConfig.apiKey ? encrypt(newConfig.apiKey) : '');
+    sessionStorage.setItem('canvas_output_path', newConfig.outputPath);
     setConfig(newConfig);
   };
 
