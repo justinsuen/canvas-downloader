@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import requests
 import logging
@@ -41,9 +43,74 @@ CORS(app, resources={
 # Initialize SocketIO with proper CORS settings
 socketio = SocketIO(app, cors_allowed_origins=FRONTEND_URLS, logger=True, engineio_logger=True)
 
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["1000 per day", "100 per hour"]
+)
+
 # Global variables for tracking downloads
 active_downloads = {}
 download_locks = {}
+
+# Rate limiting tracking
+course_processing_counts = {}  # {ip: {'count': N, 'reset_time': timestamp}}
+file_download_counts = {}      # {ip: {'hourly': N, 'daily': N, 'hour_reset': timestamp, 'day_reset': timestamp}}
+
+def check_course_processing_limit(client_ip, course_count):
+    """Check if client can process this many courses (100/hour limit)"""
+    now = time.time()
+
+    if client_ip not in course_processing_counts:
+        course_processing_counts[client_ip] = {'count': 0, 'reset_time': now + 3600}
+
+    # Reset if hour has passed
+    if now > course_processing_counts[client_ip]['reset_time']:
+        course_processing_counts[client_ip] = {'count': 0, 'reset_time': now + 3600}
+
+    # Check if adding these courses would exceed limit
+    current_count = course_processing_counts[client_ip]['count']
+    if current_count + course_count > 100:
+        return False, f"Course processing limit exceeded. You can process {100 - current_count} more courses this hour."
+
+    # Update count
+    course_processing_counts[client_ip]['count'] += course_count
+    return True, None
+
+def check_file_download_limit(client_ip, file_count=1):
+    """Check if client can download files (500/hour, 2000/day limits)"""
+    now = time.time()
+
+    if client_ip not in file_download_counts:
+        file_download_counts[client_ip] = {
+            'hourly': 0, 'daily': 0,
+            'hour_reset': now + 3600, 'day_reset': now + 86400
+        }
+
+    counts = file_download_counts[client_ip]
+
+    # Reset hourly if hour has passed
+    if now > counts['hour_reset']:
+        counts['hourly'] = 0
+        counts['hour_reset'] = now + 3600
+
+    # Reset daily if day has passed
+    if now > counts['day_reset']:
+        counts['daily'] = 0
+        counts['day_reset'] = now + 86400
+
+    # Check limits
+    if counts['hourly'] + file_count > 500:
+        return False, f"Hourly file download limit exceeded. You can download {500 - counts['hourly']} more files this hour."
+
+    if counts['daily'] + file_count > 2000:
+        return False, f"Daily file download limit exceeded. You can download {2000 - counts['daily']} more files today."
+
+    # Update counts
+    counts['hourly'] += file_count
+    counts['daily'] += file_count
+    return True, None
 
 def sanitize_log_message(message):
     """Remove API keys and sensitive data from log messages"""
@@ -84,13 +151,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class DownloadManager:
-    def __init__(self, download_id, api_url, api_key, output_path, selected_courses, socket_id):
+    def __init__(self, download_id, api_url, api_key, output_path, selected_courses, socket_id, client_ip):
         self.download_id = download_id
         self.api_url = api_url
         self.api_key = api_key
         self.output_path = output_path
         self.selected_courses = selected_courses
         self.socket_id = socket_id
+        self.client_ip = client_ip
         self.canvas = None
         self.user = None
         self.status = 'initializing'
@@ -141,7 +209,13 @@ class DownloadManager:
         """Download a single file"""
         if self.should_stop:
             return False
-            
+
+        # Check file download rate limit
+        can_download, limit_message = check_file_download_limit(self.client_ip)
+        if not can_download:
+            self.emit_log(limit_message, 'error')
+            return False  # Stop downloading due to rate limit
+
         try:
             # Get file name safely
             try:
@@ -404,6 +478,7 @@ def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
 @app.route('/api/courses', methods=['POST'])
+@limiter.limit("3 per minute")
 def get_courses():
     try:
         data = request.json
@@ -440,6 +515,13 @@ def get_courses():
             enrollment_status='active'
         ))
         emit_log_to_client(f"Retrieved {len(courses)} active courses from Canvas", 'success', socket_id)
+
+        # Check course processing rate limit
+        client_ip = get_remote_address()
+        can_process, limit_message = check_course_processing_limit(client_ip, len(courses))
+        if not can_process:
+            emit_log_to_client(limit_message, 'error', socket_id)
+            return jsonify({'error': limit_message}), 429
 
         # Format courses for frontend
         course_list = []
@@ -543,6 +625,7 @@ def get_courses():
         return jsonify({'error': f'Failed to fetch courses: {str(e)}'}), 500
 
 @app.route('/api/download/start', methods=['POST'])
+@limiter.limit("3 per minute")  # Limit download initiation
 def start_download():
     try:
         data = request.json
@@ -559,8 +642,9 @@ def start_download():
         download_id = str(uuid.uuid4())
         
         # Create download manager
+        client_ip = get_remote_address()
         download_manager = DownloadManager(
-            download_id, api_url, api_key, output_path, selected_courses, socket_id
+            download_id, api_url, api_key, output_path, selected_courses, socket_id, client_ip
         )
         
         # Store in active downloads
