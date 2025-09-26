@@ -7,6 +7,9 @@ import io from 'socket.io-client';
 import CryptoJS from 'crypto-js';
 
 const CanvasDownloader = () => {
+  // Environment detection
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.REACT_APP_NODE_ENV === 'production';
+
   // Encryption helpers
   const getDeviceKey = () => navigator.userAgent + window.screen.width + window.screen.height;
   const encrypt = (text) => CryptoJS.AES.encrypt(text, getDeviceKey()).toString();
@@ -44,11 +47,42 @@ const CanvasDownloader = () => {
   const [courseProgress, setCourseProgress] = useState({ current: 0, total: 0, course_name: '' });
 
 
-  const API_PORT = process.env.REACT_APP_API_PORT || 8000;
-  const API_HOST = process.env.REACT_APP_API_HOST || 'localhost';
+  // API Configuration based on environment
+  const getApiConfig = () => {
+    // Production: Use full API URL if provided, otherwise construct from parts
+    if (isProduction) {
+      const fullApiUrl = process.env.REACT_APP_API_URL;
+      if (fullApiUrl) {
+        return {
+          API_BASE: fullApiUrl,
+          API_URL: `${fullApiUrl}/api`
+        };
+      }
 
-  const API_BASE = `http://${API_HOST}:${API_PORT}`;
-  const API_URL = `${API_BASE}/api`;
+      // Fallback to constructing URL with HTTPS
+      const apiHost = process.env.REACT_APP_API_HOST || window.location.hostname;
+      const apiPort = process.env.REACT_APP_API_PORT || '443';
+      const protocol = 'https';
+      const API_BASE = apiPort === '443' ? `${protocol}://${apiHost}` : `${protocol}://${apiHost}:${apiPort}`;
+
+      return {
+        API_BASE,
+        API_URL: `${API_BASE}/api`
+      };
+    } else {
+      // Development: Use localhost with HTTP
+      const apiPort = process.env.REACT_APP_API_PORT || 8000;
+      const apiHost = process.env.REACT_APP_API_HOST || 'localhost';
+      const API_BASE = `http://${apiHost}:${apiPort}`;
+
+      return {
+        API_BASE,
+        API_URL: `${API_BASE}/api`
+      };
+    }
+  };
+
+  const { API_BASE, API_URL } = getApiConfig();
 
   // Mock data for demonstration (fallback when backend is not available)
   const mockCourses = [
@@ -94,7 +128,7 @@ const CanvasDownloader = () => {
       console.log('Socket.IO connected with ID:', newSocket.id);
       setIsConnected(true);
       setBackendConnected(true);
-      addLog('Connected to Canvas Downloader server', 'success');
+      addLog('Connected to Canvas Downloader server', 'info');
 
       // Test the connection
       newSocket.emit('test_connection', { message: 'Hello from React!' });
@@ -121,7 +155,7 @@ const CanvasDownloader = () => {
 
     newSocket.on('test_response', (data) => {
       console.log('Test response from server:', data);
-      addLog('Socket.IO connection test successful!', 'success');
+      addLog('Socket.IO connection test successful!', 'info');
     });
 
     newSocket.on('download_progress', (data) => {
@@ -150,7 +184,7 @@ const CanvasDownloader = () => {
     newSocket.on('user_authenticated', (data) => {
       console.log('User authenticated:', data);
       setCurrentUser(data.user);
-      addLog(`Authenticated as ${data.user.name}`, 'success');
+      addLog(`Authenticated as ${data.user.name}`, 'info');
     });
 
     newSocket.on('course_fetch_progress', (data) => {
@@ -169,15 +203,28 @@ const CanvasDownloader = () => {
     };
   }, []);
 
+  const logMethods = {
+    error: console.error,
+    warning: console.warn,
+    info: console.log,
+    default: console.log
+  };
+
   const sanitizeForLog = (str) => {
     if (typeof str !== 'string') return str;
     return str.replace(/[a-f0-9]{40,}/gi, '[API_KEY_REDACTED]');
   };
 
+  // addLog logs to the console based on environment values
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString('en-GB', { hour12: false });
     const sanitizedMessage = sanitizeForLog(message);
     setLogs(prev => [...prev, { message: sanitizedMessage, type, timestamp }]);
+
+    if (!isProduction || type === 'error' || type === 'warning') {
+      const logFn = logMethods[type] || logMethods.default;
+      logFn(`[${timestamp}] [${type.toUpperCase()}] ${sanitizedMessage}`);
+    }
   };
 
   const saveConfigToStorage = (newConfig) => {
