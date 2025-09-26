@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from flask_limiter import Limiter
@@ -19,17 +19,41 @@ import uuid
 from dotenv import load_dotenv
 load_dotenv()
 
+# Environment detection
+FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
+IS_PRODUCTION = FLASK_ENV == 'production'
+
 API_PORT = int(os.environ.get('API_PORT', 8000))
 API_HOST = os.environ.get('API_HOST', '0.0.0.0')
 
-FRONTEND_URLS = [
-    f"http://localhost:3000",
-    f"http://127.0.0.1:3000",
-    # Add more frontend URLs if needed
-]
+# CORS configuration based on environment
+if IS_PRODUCTION:
+    # Production: Use environment variable for allowed origins
+    allowed_origins = os.environ.get('ALLOWED_ORIGINS', '')
+    FRONTEND_URLS = [origin.strip() for origin in allowed_origins.split(',') if origin.strip()]
+    if not FRONTEND_URLS:
+        raise ValueError("ALLOWED_ORIGINS environment variable must be set in production")
+else:
+    # Development: Allow localhost on port 3000
+    FRONTEND_URLS = [
+        f"http://localhost:3000",
+        f"http://127.0.0.1:3000"
+    ]
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+
+# Secret key configuration
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if IS_PRODUCTION and (not SECRET_KEY or SECRET_KEY == 'your-secret-key-change-in-production'):
+    raise ValueError("SECRET_KEY environment variable must be set to a secure value in production")
+app.config['SECRET_KEY'] = SECRET_KEY or 'dev-key-not-secure'
+
+# HTTPS enforcement in production
+if IS_PRODUCTION:
+    @app.before_request
+    def force_https():
+        if not request.is_secure and os.environ.get('FORCE_HTTPS', 'true').lower() == 'true':
+            return redirect(request.url.replace('http://', 'https://'), code=301)
 
 # Configure CORS to allow WebSocket connections
 CORS(app, resources={
