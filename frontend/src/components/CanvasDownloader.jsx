@@ -4,22 +4,11 @@ import CourseSelector from './CourseSelector';
 import LogPanel from './LogPanel';
 import Header from './Header';
 import io from 'socket.io-client';
-import CryptoJS from 'crypto-js';
+import { isProduction, getApiConfig } from '../utils/environment';
+import { logger, sanitizeMessage } from '../utils/logger';
+import { encrypt, decrypt } from '../utils/crypto';
 
 const CanvasDownloader = () => {
-  // Environment detection
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.REACT_APP_NODE_ENV === 'production';
-
-  // Encryption helpers
-  const getDeviceKey = () => navigator.userAgent + window.screen.width + window.screen.height;
-  const encrypt = (text) => CryptoJS.AES.encrypt(text, getDeviceKey()).toString();
-  const decrypt = (encrypted) => {
-    try {
-      return CryptoJS.AES.decrypt(encrypted, getDeviceKey()).toString(CryptoJS.enc.Utf8);
-    } catch {
-      return '';
-    }
-  };
 
   const [config, setConfig] = useState(() => {
     // Load saved config from sessionStorage with decryption
@@ -47,41 +36,7 @@ const CanvasDownloader = () => {
   const [courseProgress, setCourseProgress] = useState({ current: 0, total: 0, course_name: '' });
 
 
-  // API Configuration based on environment
-  const getApiConfig = () => {
-    // Production: Use full API URL if provided, otherwise construct from parts
-    if (isProduction) {
-      const fullApiUrl = process.env.REACT_APP_API_URL;
-      if (fullApiUrl) {
-        return {
-          API_BASE: fullApiUrl,
-          API_URL: `${fullApiUrl}/api`
-        };
-      }
-
-      // Fallback to constructing URL with HTTPS
-      const apiHost = process.env.REACT_APP_API_HOST || window.location.hostname;
-      const apiPort = process.env.REACT_APP_API_PORT || '443';
-      const protocol = 'https';
-      const API_BASE = apiPort === '443' ? `${protocol}://${apiHost}` : `${protocol}://${apiHost}:${apiPort}`;
-
-      return {
-        API_BASE,
-        API_URL: `${API_BASE}/api`
-      };
-    } else {
-      // Development: Use localhost with HTTP
-      const apiPort = process.env.REACT_APP_API_PORT || 8000;
-      const apiHost = process.env.REACT_APP_API_HOST || 'localhost';
-      const API_BASE = `http://${apiHost}:${apiPort}`;
-
-      return {
-        API_BASE,
-        API_URL: `${API_BASE}/api`
-      };
-    }
-  };
-
+  // API Configuration
   const { API_BASE, API_URL } = getApiConfig();
 
   // Mock data for demonstration (fallback when backend is not available)
@@ -114,7 +69,7 @@ const CanvasDownloader = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    console.log('Initializing Socket.IO connection...');
+    logger.debug('Initializing Socket.IO connection...');
 
     const newSocket = io(API_BASE, {
       transports: ['websocket', 'polling'],
@@ -125,54 +80,52 @@ const CanvasDownloader = () => {
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
-      console.log('Socket.IO connected with ID:', newSocket.id);
+      logger.info(`Socket.IO connected with ID: ${newSocket.id}`);
       setIsConnected(true);
       setBackendConnected(true);
-      addLog('Connected to Canvas Downloader server', 'info');
+      sendToLogPanel('Connected to Canvas Downloader server', 'info');
 
       // Test the connection
       newSocket.emit('test_connection', { message: 'Hello from React!' });
     });
 
     newSocket.on('disconnect', (reason) => {
-      console.log('Socket.IO disconnected:', reason);
+      logger.warn(`Socket.IO disconnected: ${reason}`);
       setIsConnected(false);
       setBackendConnected(false);
-      addLog(`Disconnected from server: ${reason}`, 'warning');
+      sendToLogPanel(`Disconnected from server: ${reason}`, 'warning');
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('Socket.IO connection error:', error);
+      logger.error(`Socket.IO connection error: ${error.message}`);
       setIsConnected(false);
       setBackendConnected(false);
-      addLog(`Connection failed: ${error.message}`, 'error');
+      sendToLogPanel(`Connection failed: ${error.message}`, 'error');
     });
 
     newSocket.on('connected', (data) => {
-      console.log('Server welcome message:', data);
-      addLog(data.status, 'info');
+      logger.info(`Server welcome message received`);
+      sendToLogPanel(data.status, 'info');
     });
 
     newSocket.on('test_response', (data) => {
-      console.log('Test response from server:', data);
-      addLog('Socket.IO connection test successful!', 'info');
+      logger.info('Socket.IO connection test successful');
+      sendToLogPanel('Socket.IO connection test successful!', 'info');
     });
 
     newSocket.on('download_progress', (data) => {
-      console.log('Progress update:', data);
+      logger.debug(`Progress update: ${data.current}/${data.total}`);
       setProgress(data);
     });
 
     newSocket.on('download_log', (logEntry) => {
-      console.log('Log from server:', logEntry);
+      logger.debug('Log received from server');
       // Ensure server logs also use 24-hour format
       const newDate = new Date();
       if (logEntry.timestamp) {
         const [hours, minutes, seconds] = logEntry.timestamp.split(':');
         newDate.setHours(hours, minutes, seconds);
       }
-
-      console.log(newDate);
 
       const normalizedLogEntry = {
         ...logEntry,
@@ -182,49 +135,32 @@ const CanvasDownloader = () => {
     });
 
     newSocket.on('user_authenticated', (data) => {
-      console.log('User authenticated:', data);
+      logger.info(`User authenticated: ${data.user.name}`);
       setCurrentUser(data.user);
-      addLog(`Authenticated as ${data.user.name}`, 'info');
+      sendToLogPanel(`Authenticated as ${data.user.name}`, 'info');
     });
 
     newSocket.on('course_fetch_progress', (data) => {
-      console.log('Course fetch progress:', data);
+      logger.debug(`Course fetch progress: ${data.current}/${data.total}`);
       setCourseProgress(data);
     });
 
     newSocket.on('error', (error) => {
-      console.error('Socket.IO error:', error);
-      addLog(`Socket error: ${error.message}`, 'error');
+      logger.error(`Socket.IO error: ${error.message}`);
+      sendToLogPanel(`Socket error: ${error.message}`, 'error');
     });
 
     return () => {
-      console.log('Cleaning up Socket.IO connection');
+      logger.debug('Cleaning up Socket.IO connection');
       newSocket.close();
     };
   }, []);
 
-  const logMethods = {
-    error: console.error,
-    warning: console.warn,
-    info: console.log,
-    default: console.log
-  };
-
-  const sanitizeForLog = (str) => {
-    if (typeof str !== 'string') return str;
-    return str.replace(/[a-f0-9]{40,}/gi, '[API_KEY_REDACTED]');
-  };
-
-  // addLog logs to the console based on environment values
-  const addLog = (message, type = 'info') => {
+  // sendToLogPanel adds messages to UI log panel only
+  const sendToLogPanel = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString('en-GB', { hour12: false });
-    const sanitizedMessage = sanitizeForLog(message);
+    const sanitizedMessage = sanitizeMessage(message);
     setLogs(prev => [...prev, { message: sanitizedMessage, type, timestamp }]);
-
-    if (!isProduction || type === 'error' || type === 'warning') {
-      const logFn = logMethods[type] || logMethods.default;
-      logFn(`[${timestamp}] [${type.toUpperCase()}] ${sanitizedMessage}`);
-    }
   };
 
   const saveConfigToStorage = (newConfig) => {
@@ -244,14 +180,14 @@ const CanvasDownloader = () => {
 
       if (response.ok) {
         setBackendConnected(true);
-        addLog('Backend server is running', 'success');
+        sendToLogPanel('Backend server is running', 'success');
         return true;
       } else {
         throw new Error('Backend not responding');
       }
     } catch (error) {
       setBackendConnected(false);
-      addLog('Backend server not available - using demo mode', 'warning');
+      sendToLogPanel('Backend server not available - using demo mode', 'warning');
       return false;
     }
   };
@@ -261,7 +197,7 @@ const CanvasDownloader = () => {
 
     setDownloadStatus('loading');
     setCourseProgress({ current: 0, total: 0, course_name: '' }); // Reset progress
-    addLog('Fetching courses from Canvas...', 'info');
+    sendToLogPanel('Fetching courses from Canvas...', 'info');
 
     // Test backend connection first
     const backendAvailable = await testBackendConnection();
@@ -269,7 +205,7 @@ const CanvasDownloader = () => {
     if (!backendAvailable) {
       setCourses(mockCourses);
       setDownloadStatus('idle');
-      addLog('Using demo data - start Flask backend for real functionality', 'warning');
+      sendToLogPanel('Using demo data - start Flask backend for real functionality', 'warning');
       return;
     }
 
@@ -294,31 +230,31 @@ const CanvasDownloader = () => {
       const data = await response.json();
       setCourses(data.courses);
       setCurrentUser(data.user);
-      addLog(`Found ${data.courses.length} courses for ${data.user.name}`, 'success');
+      sendToLogPanel(`Found ${data.courses.length} courses for ${data.user.name}`, 'success');
       setDownloadStatus('idle');
 
     } catch (error) {
-      addLog(`Failed to fetch courses: ${error.message}`, 'error');
+      sendToLogPanel(`Failed to fetch courses: ${error.message}`, 'error');
       setDownloadStatus('error');
       setCourses(mockCourses);
-      addLog('Using demo data - check your Canvas API credentials', 'warning');
+      sendToLogPanel('Using demo data - check your Canvas API credentials', 'warning');
     }
   };
 
   const startRealDownload = async () => {
     if (selectedCourses.size === 0) {
-      addLog('No courses selected for download', 'error');
+      sendToLogPanel('No courses selected for download', 'error');
       return;
     }
 
     if (!socket || !isConnected || !backendConnected) {
-      addLog('Not connected to server - starting demo mode', 'warning');
+      sendToLogPanel('Not connected to server - starting demo mode', 'warning');
       simulateDownload();
       return;
     }
 
     setDownloadStatus('downloading');
-    addLog(`Starting download of ${selectedCourses.size} courses`, 'info');
+    sendToLogPanel(`Starting download of ${selectedCourses.size} courses`, 'info');
 
     try {
       const response = await fetch(`${API_URL}/download/start`, {
@@ -342,10 +278,10 @@ const CanvasDownloader = () => {
 
       const data = await response.json();
       setDownloadId(data.download_id);
-      addLog('Real download started successfully!', 'success');
+      sendToLogPanel('Real download started successfully!', 'success');
 
     } catch (error) {
-      addLog(`Failed to start download: ${error.message}`, 'error');
+      sendToLogPanel(`Failed to start download: ${error.message}`, 'error');
       setDownloadStatus('error');
     }
   };
@@ -354,7 +290,7 @@ const CanvasDownloader = () => {
     if (!downloadId) {
       setDownloadStatus('idle');
       setProgress({ current: 0, total: 0, currentFile: '' });
-      addLog('Download stopped', 'warning');
+      sendToLogPanel('Download stopped', 'warning');
       return;
     }
 
@@ -364,12 +300,12 @@ const CanvasDownloader = () => {
       });
 
       if (response.ok) {
-        addLog('Download stop requested', 'info');
+        sendToLogPanel('Download stop requested', 'info');
       } else {
-        addLog('Failed to stop download, but resetting status', 'warning');
+        sendToLogPanel('Failed to stop download, but resetting status', 'warning');
       }
     } catch (error) {
-      addLog(`Failed to stop download: ${error.message}`, 'error');
+      sendToLogPanel(`Failed to stop download: ${error.message}`, 'error');
     } finally {
       // Always reset state regardless of API response
       setDownloadStatus('idle');
@@ -384,12 +320,12 @@ const CanvasDownloader = () => {
     const totalFiles = selectedCoursesArray.reduce((sum, course) => sum + course.file_count, 0);
 
     setProgress({ current: 0, total: totalFiles, currentFile: '' });
-    addLog(`Starting demo download of ${selectedCoursesArray.length} courses (${totalFiles} files)`, 'info');
+    sendToLogPanel(`Starting demo download of ${selectedCoursesArray.length} courses (${totalFiles} files)`, 'info');
 
     let currentFileCount = 0;
 
     for (const course of selectedCoursesArray) {
-      addLog(`Processing course: ${course.name}`, 'info');
+      sendToLogPanel(`Processing course: ${course.name}`, 'info');
 
       for (let i = 0; i < course.file_count; i++) {
         await new Promise(resolve => setTimeout(resolve, 50)); // Faster for demo
@@ -402,15 +338,15 @@ const CanvasDownloader = () => {
         });
 
         if (Math.random() > 0.95) { // Simulate occasional warnings
-          addLog(`Warning: Simulated issue with ${fileName}`, 'warning');
+          sendToLogPanel(`Warning: Simulated issue with ${fileName}`, 'warning');
         }
       }
 
-      addLog(`Completed downloading ${course.name}`, 'success');
+      sendToLogPanel(`Completed downloading ${course.name}`, 'success');
     }
 
     setDownloadStatus('completed');
-    addLog('Demo download completed! Start Flask backend for real downloads.', 'success');
+    sendToLogPanel('Demo download completed! Start Flask backend for real downloads.', 'success');
   };
 
   const handleStartDownload = () => {
@@ -429,7 +365,7 @@ const CanvasDownloader = () => {
       setDownloadStatus('idle');
       setProgress({ current: 0, total: 0, currentFile: '' });
       setDownloadId(null);
-      addLog('Download stopped', 'warning');
+      sendToLogPanel('Download stopped', 'warning');
     }
   };
 
@@ -480,7 +416,7 @@ const CanvasDownloader = () => {
               config={config}
               setConfig={saveConfigToStorage}
               setShowConfig={setShowConfig}
-              addLog={addLog}
+              sendToLogPanel={sendToLogPanel}
               onSave={() => {
                 // Fetch courses only when user saves configuration
                 if (config.apiUrl && config.apiKey) {

@@ -76,7 +76,7 @@ const CourseSelector = ({
           )}
         </div>
       ) : courses.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 flex-1 flex flex-col items-center justify-center">
+        <div className="text-center text-gray-500 flex-1 flex flex-col items-center justify-center">
           <Folder className="mx-auto mb-2" size={48} />
           <p>No courses found. Please configure your API settings.</p>
         </div>

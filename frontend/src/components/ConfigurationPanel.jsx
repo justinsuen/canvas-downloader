@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ConfigurationPanel = ({ config, setConfig, setShowConfig, addLog, onSave }) => {
+const ConfigurationPanel = ({ config, setConfig, setShowConfig, sendToLogPanel, onSave }) => {
   return (
     <div className="bg-white rounded-lg shadow-xl p-6">
       <h2 className="text-xl font-semibold mb-4">Configuration</h2>
@@ -40,7 +40,7 @@ const ConfigurationPanel = ({ config, setConfig, setShowConfig, addLog, onSave }
           <button
             onClick={() => {
               setShowConfig(false);
-              addLog('Configuration updated successfully', 'success');
+              sendToLogPanel('Configuration updated successfully', 'success');
               // Trigger course fetching after saving
               if (onSave) {
                 onSave();
